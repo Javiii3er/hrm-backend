@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(EMPLEADO)
+  employeeId   String?   @unique            
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  documents    Document[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Employee {
+  id            String         @id @default(uuid())
+  nationalId    String         @unique
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  departmentId  String
+  position      String?
+  hireDate      DateTime?
+  status        EmployeeStatus @default(ACTIVE)
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  department    Department     @relation(fields: [departmentId], references: [id])
+  user          User?          
+  documents     Document[]
+  payrollItems  PayrollItem[]
+
+  @@map("employees")
+}
+
+model Department {
+  id           String     @id @default(uuid())
+  name         String
+  description  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  employees    Employee[]
+  payrolls     Payroll[]
+
+  @@map("departments")
+}
+
+
+model Document {
+  id          String    @id @default(uuid())
+  employeeId  String
+  filename    String
+  storageKey  String
+  mimeType    String?
+  size        Int?
+  uploadedBy  String
+  createdAt   DateTime  @default(now())
+  tags        Json?
+
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  uploader    User      @relation(fields: [uploadedBy], references: [id])
+
+  @@map("documents")
+}
+
+model Payroll {
+  id            String        @id @default(uuid())
+  periodStart   DateTime
+  periodEnd     DateTime
+  departmentId  String?
+  status        PayrollStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  department    Department?   @relation(fields: [departmentId], references: [id])
+  items         PayrollItem[]
+
+  @@map("payrolls")
+}
+
+model PayrollItem {
+  id            String    @id @default(uuid())
+  payrollId     String
+  employeeId    String
+  grossAmount   Float
+  netAmount     Float
+  deductions    Json?
+  createdAt     DateTime  @default(now())
+
+  payroll       Payroll   @relation(fields: [payrollId], references: [id])
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+
+  @@map("payroll_items")
+}
+
+model AuditLog {
+  id            String    @id @default(uuid())
+  entity        String
+  action        String
+  userId        String
+  before        Json?
+  after         Json?
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+
+enum UserRole {
+  ADMIN
+  RRHH
+  EMPLEADO
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  VACATION
+}
+
+enum PayrollStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}

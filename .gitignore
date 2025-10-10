@@ -1,0 +1,18 @@
+# Dependencias de Node
+/node_modules
+/dist
+/build
+/out
+
+# Variables de entorno sensibles (¡MUY IMPORTANTE!)
+.env
+.env.local
+
+# Logs y caché
+npm-debug.log
+yarn-error.log
+.DS_Store
+*.log
+
+# Archivos de VS Code (opcional)
+.vscode/
