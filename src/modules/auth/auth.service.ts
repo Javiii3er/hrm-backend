@@ -42,6 +42,14 @@ export class AuthService {
       throw new Error('CREDENTIALS_INVALID');
     }
 
+    const accessTokenOptions: jwt.SignOptions = {
+      expiresIn: env.JWT_EXPIRES_IN
+    };
+
+    const refreshTokenOptions: jwt.SignOptions = {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN
+    };
+
     const accessToken = jwt.sign(
       { 
         userId: user.id, 
@@ -50,13 +58,13 @@ export class AuthService {
         employeeId: user.employeeId 
       },
       env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN }
+      accessTokenOptions
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id },
       env.JWT_REFRESH_SECRET,
-      { expiresIn: env.JWT_REFRESH_EXPIRES_IN }
+      refreshTokenOptions
     );
 
     const userResponse = {
@@ -98,6 +106,10 @@ export class AuthService {
         throw new Error('USER_NOT_FOUND');
       }
 
+      const accessTokenOptions: jwt.SignOptions = {
+        expiresIn: env.JWT_EXPIRES_IN
+      };
+
       const accessToken = jwt.sign(
         { 
           userId: user.id, 
@@ -106,7 +118,7 @@ export class AuthService {
           employeeId: user.employeeId 
         },
         env.JWT_SECRET,
-        { expiresIn: env.JWT_EXPIRES_IN }
+        accessTokenOptions
       );
 
       return { 
