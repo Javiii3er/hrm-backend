@@ -81,18 +81,19 @@ model Document {
 }
 
 model Payroll {
-  id            String        @id @default(uuid())
-  periodStart   DateTime
-  periodEnd     DateTime
-  departmentId  String?
-  status        PayrollStatus @default(DRAFT)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+id               String        @id @default(uuid())
+periodStart      DateTime
+periodEnd        DateTime
+description      String?
+departmentId     String?
+status           PayrollStatus @default(DRAFT)
+createdAt        DateTime      @default(now())
+updatedAt        DateTime      @updatedAt
 
-  department    Department?   @relation(fields: [departmentId], references: [id])
-  items         PayrollItem[]
+department       Department?   @relation(fields: [departmentId], references: [id])
+items            PayrollItem[]
 
-  @@map("payrolls")
+@@map("payrolls")
 }
 
 model PayrollItem {
