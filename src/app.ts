@@ -9,8 +9,8 @@ import { env } from './core/config/env.js';
 
 // Importar rutas
 import authRoutes from './modules/auth/auth.routes.js';
-// Nota: Estas rutas las crearemos después
-// import employeeRoutes from './modules/employees/employee.routes.js';
+import employeeRoutes from './modules/employees/employee.routes.js'; 
+// Nota: Dejamos las rutas futuras comentadas para referencia.
 // import documentRoutes from './modules/documents/document.routes.js';
 // import payrollRoutes from './modules/payroll/payroll.routes.js';
 // import userRoutes from './modules/users/user.routes.js';
@@ -33,6 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/employees', employeeRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({

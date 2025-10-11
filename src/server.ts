@@ -37,7 +37,7 @@ async function gracefulShutdown(signal: string) {
     });
 
     setTimeout(() => {
-        console.error('❌ Cierre forzado por timeout.');
+        console.error(' Cierre forzado por timeout.');
         process.exit(1);
     }, 10000);
 }
