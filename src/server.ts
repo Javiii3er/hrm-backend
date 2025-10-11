@@ -1,36 +1,48 @@
+// src/server.ts
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { connectDB } from './core/config/database.js';
+import { env } from './core/config/env.js';
+import app from './app.js';
 
-const app = express();
-const PORT = process.env.PORT || 3000; 
-
-export const prisma = new PrismaClient();
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/', (req, res) => {
-    res.status(200).json({ 
-        message: 'HRM System API running!', 
-        environment: process.env.NODE_ENV || 'development'
-    });
-});
+const PORT = env.PORT;
+let server: any;
 
 async function startServer() {
-    try {
-        await prisma.$connect();
-        console.log('Database connected successfully.');
+  try {
+    await connectDB();
 
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
-            console.log(`Access at http://localhost:${PORT}`);
-        });
-    } catch (error) {
-        console.error('Failed to connect to database or start server:', error);
-        process.exit(1);
-    }
+    server = app.listen(PORT, () => {
+      console.log('Servidor HRM ejecutándose...');
+      console.log(`Entorno: ${env.NODE_ENV}`);
+      console.log(`Puerto: ${PORT}`);
+      console.log(`Health check: http://localhost:${PORT}/health`);
+      console.log(`API Base: http://localhost:${PORT}/api`);
+    });
+
+  } catch (error) {
+    console.error(' Error fatal al iniciar el servidor o conectar la DB:', error);
+    process.exit(1);
+  }
 }
+
+async function gracefulShutdown(signal: string) {
+    console.log(`\n Recibida señal ${signal}, cerrando servidor...`);
+    
+    server.close(async () => {
+        console.log('Express Server cerrado.');
+        
+        
+        console.log('Proceso terminado.');
+        process.exit(0);
+    });
+
+    setTimeout(() => {
+        console.error('❌ Cierre forzado por timeout.');
+        process.exit(1);
+    }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 startServer();
