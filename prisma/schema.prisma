@@ -62,20 +62,22 @@ model Department {
 
 
 model Document {
-  id          String    @id @default(uuid())
-  employeeId  String
-  filename    String
-  storageKey  String
-  mimeType    String?
-  size        Int?
-  uploadedBy  String
-  createdAt   DateTime  @default(now())
-  tags        Json?
+  id          String    @id @default(uuid())
+  employeeId  String
+  filename    String
+  storageKey  String   @unique 
+  mimeType    String?
+  size        Int?
+  uploadedBy  String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tags        Json?
+  description String?   @db.VarChar(500) 
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  uploader    User      @relation(fields: [uploadedBy], references: [id])
 
-  employee    Employee  @relation(fields: [employeeId], references: [id])
-  uploader    User      @relation(fields: [uploadedBy], references: [id])
-
-  @@map("documents")
+  @@index([employeeId])
+  @@map("documents")
 }
 
 model Payroll {
