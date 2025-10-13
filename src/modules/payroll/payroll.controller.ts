@@ -1,4 +1,4 @@
-// src/modules/payroll/payroll.controller.ts (FINAL Y CORREGIDO)
+// src/modules/payroll/payroll.controller.ts
 import { Request, Response } from 'express';
 import { PayrollService } from './payroll.service.js';
 import { sendSuccess, sendError } from '../../core/utils/response.js';
@@ -13,7 +13,7 @@ export class PayrollController {
   async createPayroll(req: Request, res: Response) {
     try {
       const result = await payrollService.createPayroll(req.body);
-      sendSuccess(res, result, 201, 'Nómina creada exitosamente');
+      sendSuccess(res, result, 201, { message: 'Nómina creada exitosamente' });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       switch (errorMessage) {
@@ -27,8 +27,20 @@ export class PayrollController {
 
   async getPayrolls(req: Request, res: Response) {
     try {
-      const result = await payrollService.getPayrolls(req.query as any);
-      sendSuccess(res, result, 200, 'Nóminas obtenidas'); 
+      const [payrolls, total] = (await payrollService.getPayrolls(req.query as any)) as unknown as [any[], number];
+      
+      const page = parseInt(String(req.query.page || 1), 10);
+      const pageSize = parseInt(String(req.query.pageSize || 10), 10);
+      
+      sendSuccess(res, payrolls, 200, {
+        message: 'Nóminas obtenidas',
+        meta: {
+          totalItems: total,
+          page: page,
+          pageSize: pageSize,
+          totalPages: Math.ceil(total / pageSize)
+        }
+      });
     } catch (error: unknown) {
       sendError(res, 'FETCH_ERROR', 'Error al obtener nóminas', 500);
     }
@@ -38,7 +50,7 @@ export class PayrollController {
     try {
       const { id } = req.params;
       const result = await payrollService.getPayrollById(id);
-      sendSuccess(res, result, 200, 'Detalles de nómina obtenidos');
+      sendSuccess(res, result, 200, { message: 'Detalles de nómina obtenidos' });
     } catch (error: unknown) {
       if (getErrorMessage(error) === 'PAYROLL_NOT_FOUND') {
         sendError(res, 'PAYROLL_NOT_FOUND', 'Nómina no encontrada', 404);
@@ -52,19 +64,19 @@ export class PayrollController {
     try {
       const { id } = req.params;
       const result = await payrollService.generatePayrollItems(id, req.body);
-      sendSuccess(res, result, 200, 'Items de nómina generados');
+      sendSuccess(res, result, 200, { message: 'Items de nómina generados' });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       switch (true) { 
         case errorMessage === 'PAYROLL_NOT_FOUND': 
-            sendError(res, 'PAYROLL_NOT_FOUND', 'Nómina no encontrada', 404); 
-            break;
+            sendError(res, 'PAYROLL_NOT_FOUND', 'Nómina no encontrada', 404); 
+            break;
         case errorMessage === 'PAYROLL_NOT_EDITABLE': 
-            sendError(res, 'PAYROLL_NOT_EDITABLE', 'Nómina no editable', 422); 
-            break;
+            sendError(res, 'PAYROLL_NOT_EDITABLE', 'Nómina no editable', 422); 
+            break;
         case errorMessage === 'NO_EMPLOYEES_FOUND': 
-            sendError(res, 'NO_EMPLOYEES_FOUND', 'No hay empleados para generar nómina', 422); 
-            break;
+            sendError(res, 'NO_EMPLOYEES_FOUND', 'No hay empleados para generar nómina', 422); 
+            break;
 
         case errorMessage.startsWith('EMPLOYEE_NOT_FOUND'): 
             sendError(res, 'EMPLOYEE_NOT_FOUND_IN_ITEMS', 'Uno o más empleados en la lista no existen', 404);
@@ -78,7 +90,7 @@ export class PayrollController {
     try {
       const { id } = req.params;
       const result = await payrollService.finalizePayroll(id);
-      sendSuccess(res, result, 200, 'Nómina finalizada exitosamente');
+      sendSuccess(res, result, 200, { message: 'Nómina finalizada exitosamente' });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       switch (errorMessage) {
@@ -94,7 +106,7 @@ export class PayrollController {
     try {
       const { id } = req.params;
       const result = await payrollService.deletePayroll(id);
-      sendSuccess(res, result, 200, 'Nómina eliminada exitosamente');
+      sendSuccess(res, result, 200, { message: 'Nómina eliminada exitosamente' });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       switch (errorMessage) {
@@ -108,7 +120,7 @@ export class PayrollController {
   async getStats(req: Request, res: Response) {
     try {
       const result = await payrollService.getPayrollStats();
-      sendSuccess(res, result, 200, 'Estadísticas de nóminas obtenidas');
+      sendSuccess(res, result, 200, { message: 'Estadísticas de nóminas obtenidas' });
     } catch (error: unknown) {
       sendError(res, 'STATS_ERROR', 'Error al obtener estadísticas', 500);
     }

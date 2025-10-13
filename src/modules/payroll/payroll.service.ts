@@ -1,9 +1,9 @@
 // src/modules/payroll/payroll.service.ts
 import { prisma } from '../../core/config/database.js';
 import { Prisma } from '@prisma/client';
-import { 
-  PayrollCreateDTO, 
-  PayrollUpdateDTO, 
+import { 
+  PayrollCreateDTO, 
+  PayrollUpdateDTO, 
   PayrollQueryDTO,
   GeneratePayrollDTO,
   PayrollItemDTO
@@ -77,14 +77,18 @@ export class PayrollService {
   }
 
   async getPayrolls(query: PayrollQueryDTO) {
-    const { startDate, endDate, department, status, page, pageSize } = query;
+    const { startDate, endDate, department, status } = query;
+    
+    const page = Number(query.page) > 0 ? Number(query.page) : 1;
+    const pageSize = Number(query.pageSize) > 0 ? Number(query.pageSize) : 10;
+    
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.PayrollWhereInput = {};
 
     if (startDate) {
       const start = new Date(startDate);
-      const end = endDate ? new Date(endDate) : new Date();
+      const end = endDate ? new Date(endDate) : new Date(); 
       
       where.periodStart = { gte: start };
       where.periodEnd = { lte: end };
@@ -106,7 +110,7 @@ export class PayrollService {
           department: { select: { id: true, name: true } },
           _count: { select: { items: true } },
           items: {
-            take: 1, 
+            take: 1,
             include: {
               employee: { select: { firstName: true, lastName: true } }
             }
@@ -178,7 +182,7 @@ export class PayrollService {
       itemsToCreate = data.items;
     } else {
       const employees = await prisma.employee.findMany({
-        where: { 
+        where: { 
           status: 'ACTIVE',
           ...(payroll.departmentId && { departmentId: payroll.departmentId })
         },
@@ -203,6 +207,7 @@ export class PayrollService {
         if (!employee) {
           throw new Error(`EMPLOYEE_NOT_FOUND: ${item.employeeId}`);
         }
+        
         const deductions = await this.calculateDeductions(item.grossAmount, item.deductions);
         
         const totalDeductions = Object.values(deductions).reduce((sum, amount) => sum + amount, 0);
@@ -230,10 +235,14 @@ export class PayrollService {
       include: { items: true }
     });
 
-    if (!payroll || payroll.status !== 'DRAFT' || payroll.items.length === 0) {
-      if (!payroll) throw new Error('PAYROLL_NOT_FOUND');
-      if (payroll.status !== 'DRAFT') throw new Error('PAYROLL_ALREADY_FINALIZED');
-      if (payroll.items.length === 0) throw new Error('NO_PAYROLL_ITEMS');
+    if (!payroll) {
+      throw new Error('PAYROLL_NOT_FOUND');
+    }
+    if (payroll.status !== 'DRAFT') {
+      throw new Error('PAYROLL_ALREADY_FINALIZED');
+    }
+    if (payroll.items.length === 0) {
+      throw new Error('NO_PAYROLL_ITEMS');
     }
 
     const updatedPayroll = await prisma.payroll.update({
@@ -272,7 +281,6 @@ export class PayrollService {
   }
 
   private calculateGrossSalary(employee: EmployeeWithDepartment): number {
-
     return 5000; 
   }
 
@@ -298,6 +306,7 @@ export class PayrollService {
 
     return parseFloat(isrAmount.toFixed(2));
   }
+  
 
   async getPayrollStats() {
     const totalPayrolls = await prisma.payroll.count();

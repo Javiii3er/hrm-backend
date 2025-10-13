@@ -5,19 +5,24 @@ import { sendSuccess, sendError } from '../../core/utils/response.js';
 
 const documentService = new DocumentService();
 
+interface DocumentRequest extends Request {
+  file?: Express.Multer.File;
+  user?: {
+    id: string;
+    role?: string;
+  };
+}
+
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : 'UNKNOWN_SERVER_ERROR';
 };
 
-interface DocumentRequest extends Request {
-    file?: Express.Multer.File;
-}
-
 export class DocumentController {
+
   async uploadDocument(req: DocumentRequest, res: Response) {
     try {
       if (!req.file) {
-        return sendError(res, 'NO_FILE', 'No se ha subido ningún archivo', 400);
+        return sendError(res, 'NO_FILE', 'No se ha adjuntado ningún archivo', 400);
       }
 
       if (!req.user) {
@@ -25,32 +30,23 @@ export class DocumentController {
       }
 
       const { id: employeeId } = req.params;
-      const result = await documentService.uploadDocument(
-        employeeId, 
-        req.file, 
-        req.body, 
-        req.user.id
-      );
+      const result = await documentService.uploadDocument(employeeId, req.file, req.body, req.user.id);
 
-      sendSuccess(res, result, 201, 'Documento subido exitosamente');
+      sendSuccess(res, result, 201, { message: 'Documento subido exitosamente' });
+
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
-      
       switch (errorMessage) {
         case 'EMPLOYEE_NOT_FOUND':
-          sendError(res, 'EMPLOYEE_NOT_FOUND', 'Empleado no encontrado', 404);
-          break;
+          return sendError(res, 'EMPLOYEE_NOT_FOUND', 'Empleado no encontrado', 404);
         case 'FILE_TOO_LARGE':
-          sendError(res, 'FILE_TOO_LARGE', 'El archivo excede el tamaño máximo permitido', 413);
-          break;
+          return sendError(res, 'FILE_TOO_LARGE', 'El archivo excede el tamaño máximo permitido', 413);
         case 'INVALID_FILE_TYPE':
-          sendError(res, 'INVALID_FILE_TYPE', 'Tipo de archivo no permitido', 415);
-          break;
+          return sendError(res, 'INVALID_FILE_TYPE', 'Tipo de archivo no permitido', 415);
         case 'FILE_SAVE_ERROR':
-          sendError(res, 'FILE_SAVE_ERROR', 'Error al guardar el archivo', 500);
-          break;
+          return sendError(res, 'FILE_SAVE_ERROR', 'Error al guardar el archivo', 500);
         default:
-          sendError(res, 'UPLOAD_ERROR', 'Error al subir documento', 500);
+          return sendError(res, 'UPLOAD_ERROR', 'Error al subir el documento', 500);
       }
     }
   }
@@ -59,13 +55,12 @@ export class DocumentController {
     try {
       const { id: employeeId } = req.params;
       const result = await documentService.getEmployeeDocuments(employeeId, req.query as any);
-      
-      sendSuccess(res, result, 200, 'Documentos obtenidos exitosamente'); 
+
+      sendSuccess(res, result, 200, { message: 'Documentos obtenidos exitosamente' });
 
     } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      
-      if (errorMessage === 'EMPLOYEE_NOT_FOUND') {
+      const message = getErrorMessage(error);
+      if (message === 'EMPLOYEE_NOT_FOUND') {
         sendError(res, 'EMPLOYEE_NOT_FOUND', 'Empleado no encontrado', 404);
       } else {
         sendError(res, 'FETCH_ERROR', 'Error al obtener documentos', 500);
@@ -84,47 +79,34 @@ export class DocumentController {
 
       res.sendFile(result.filePath);
     } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      
-      switch (errorMessage) {
-        case 'DOCUMENT_NOT_FOUND':
-        case 'FILE_NOT_FOUND':
-          sendError(res, 'DOCUMENT_NOT_FOUND', 'Documento no encontrado', 404);
-          break;
-        default:
-          sendError(res, 'DOWNLOAD_ERROR', 'Error al descargar documento', 500);
+      const message = getErrorMessage(error);
+      if (message === 'DOCUMENT_NOT_FOUND' || message === 'FILE_NOT_FOUND') {
+        sendError(res, 'DOCUMENT_NOT_FOUND', 'Documento no encontrado', 404);
+      } else {
+        sendError(res, 'DOWNLOAD_ERROR', 'Error al descargar documento', 500);
       }
     }
   }
 
-  async deleteDocument(req: Request, res: Response) {
+  async deleteDocument(req: DocumentRequest, res: Response) {
     try {
       if (!req.user) {
         return sendError(res, 'UNAUTHORIZED', 'Usuario no autenticado', 401);
       }
 
       const { id: employeeId, docId: documentId } = req.params;
-      
-      const result = await documentService.deleteDocument(
-        employeeId, 
-        documentId, 
-        req.user.id, 
-        req.user.role
-      );
+      const result = await documentService.deleteDocument(employeeId, documentId, req.user.id, req.user.role || '');
 
-      sendSuccess(res, result, 200, 'Documento eliminado exitosamente');
+      sendSuccess(res, result, 200, { message: 'Documento eliminado exitosamente' });
+
     } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      
-      switch (errorMessage) {
-        case 'DOCUMENT_NOT_FOUND':
-          sendError(res, 'DOCUMENT_NOT_FOUND', 'Documento no encontrado', 404);
-          break;
-        case 'UNAUTHORIZED_DELETE':
-          sendError(res, 'UNAUTHORIZED_DELETE', 'No tienes permisos para eliminar este documento', 403);
-          break;
-        default:
-          sendError(res, 'DELETE_ERROR', 'Error al eliminar documento', 500);
+      const message = getErrorMessage(error);
+      if (message === 'DOCUMENT_NOT_FOUND') {
+        sendError(res, 'DOCUMENT_NOT_FOUND', 'Documento no encontrado', 404);
+      } else if (message === 'UNAUTHORIZED_DELETE') {
+        sendError(res, 'UNAUTHORIZED_DELETE', 'No tienes permisos para eliminar este documento', 403);
+      } else {
+        sendError(res, 'DELETE_ERROR', 'Error al eliminar documento', 500);
       }
     }
   }
@@ -133,11 +115,10 @@ export class DocumentController {
     try {
       const { id: employeeId } = req.params;
       const result = await documentService.getDocumentStats(employeeId);
-      sendSuccess(res, result, 200, 'Estadísticas de documentos obtenidas');
+      sendSuccess(res, result, 200, { message: 'Estadísticas de documentos obtenidas' });
     } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      
-      if (errorMessage === 'EMPLOYEE_NOT_FOUND') {
+      const message = getErrorMessage(error);
+      if (message === 'EMPLOYEE_NOT_FOUND') {
         sendError(res, 'EMPLOYEE_NOT_FOUND', 'Empleado no encontrado', 404);
       } else {
         sendError(res, 'STATS_ERROR', 'Error al obtener estadísticas', 500);

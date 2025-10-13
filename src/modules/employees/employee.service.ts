@@ -6,7 +6,9 @@ import {
   EmployeeQueryDTO 
 } from './employee.schemas.js';
 
+
 export class EmployeeService {
+  
   async createEmployee(data: EmployeeCreateDTO) {
     const existingEmployee = await prisma.employee.findUnique({
       where: { nationalId: data.nationalId }
@@ -31,11 +33,13 @@ export class EmployeeService {
     if (!department) {
       throw new Error('DEPARTMENT_NOT_FOUND');
     }
+    
+    const hireDate = data.hireDate ? new Date(data.hireDate) : new Date();
 
     const employee = await prisma.employee.create({
       data: {
         ...data,
-        hireDate: data.hireDate ? new Date(data.hireDate) : new Date(),
+        hireDate: hireDate,
         metadata: {}
       },
       include: {
@@ -53,10 +57,14 @@ export class EmployeeService {
   }
 
   async getEmployees(query: EmployeeQueryDTO) {
-    const { q, department, status, page, pageSize } = query;
+    const { q, department, status } = query;
+    
+    const page = Number(query.page) > 0 ? Number(query.page) : 1;
+    const pageSize = Number(query.pageSize) > 0 ? Number(query.pageSize) : 10;
     const skip = (page - 1) * pageSize;
 
     const where: any = {}; 
+    
     if (q) {
       where.OR = [
         { firstName: { contains: q, mode: 'insensitive' } },
@@ -188,13 +196,15 @@ export class EmployeeService {
         throw new Error('DEPARTMENT_NOT_FOUND');
       }
     }
+    
+    const updateData = {
+      ...data,
+      ...(data.hireDate && { hireDate: new Date(data.hireDate) })
+    };
 
     const updatedEmployee = await prisma.employee.update({
       where: { id },
-      data: {
-        ...data,
-        ...(data.hireDate && { hireDate: new Date(data.hireDate) })
-      },
+      data: updateData,
       include: {
         department: {
           select: {
