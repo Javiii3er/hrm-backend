@@ -3,8 +3,8 @@
     "module": "nodenext", 
     "target": "es2022",
     "moduleResolution": "nodenext",
-
-    "rootDir": "./src",
+    
+    "rootDir": "./src", 
     "outDir": "./dist",
 
     "esModuleInterop": true,
@@ -14,9 +14,11 @@
 
     "verbatimModuleSyntax": false, 
     "isolatedModules": true, 
-
+    
     "skipLibCheck": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["node"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"], 
+  "exclude": ["node_modules", "dist", "uploads", "scripts", "prisma"] 
 }

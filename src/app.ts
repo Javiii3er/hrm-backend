@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+
 import { requestLogger } from './core/middleware/logging.js';
 import { errorHandler } from './core/middleware/errorHandler.js';
 import { env } from './core/config/env.js';
@@ -10,13 +11,16 @@ import { env } from './core/config/env.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import employeeRoutes from './modules/employees/employee.routes.js'; 
 import documentRoutes from './modules/documents/document.routes.js';
-import payrollRoutes from './modules/payroll/payroll.routes.js';
+import payrollRoutes from './modules/payroll/payroll.routes.js'; 
+import userRoutes from './modules/users/user.routes.js'; 
 
 const app = express();
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+
 app.use(compression());
 app.use(cors({
   origin: env.NODE_ENV === 'production' 
@@ -34,8 +38,10 @@ app.use('/api/uploads', express.static('uploads'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes); 
-app.use('/api/employees', documentRoutes);
+app.use('/api/documents', documentRoutes);
 app.use('/api/payroll', payrollRoutes); 
+app.use('/api/users', userRoutes);
+
 
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -48,7 +54,6 @@ app.get('/health', (req, res) => {
     }
   });
 });
-
 
 app.use('*', (req, res) => {
   res.status(404).json({
