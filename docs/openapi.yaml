@@ -1,0 +1,966 @@
+openapi: 3.1.0
+info:
+  title: Sistema HRM - API
+  description: Sistema de Gestión de Recursos Humanos y Nóminas
+  version: 1.0.0
+  contact:
+    name: Equipo de Desarrollo
+    email: soporte@empresa.com
+
+servers:
+  - url: http://localhost:4000/api
+    description: Servidor de desarrollo
+  - url: https://tu-dominio.com/api
+    description: Servidor de producción
+
+tags:
+  - name: Autenticación
+    description: Endpoints de login, logout y gestión de tokens
+  - name: Empleados
+    description: Gestión completa de empleados
+  - name: Documentos
+    description: Upload y download de documentos
+  - name: Nóminas
+    description: Gestión de nóminas y cálculos
+  - name: Usuarios
+    description: Administración de usuarios del sistema
+
+paths:
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      description: Autentica un usuario y devuelve tokens JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseWrapper'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Obtener perfil de usuario
+      description: Retorna la información del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil obtenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileWrapper'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Autenticación]
+      summary: Refrescar token
+      description: Obtiene un nuevo access token usando el refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refrescado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenWrapper'
+
+  /employees:
+    get:
+      tags: [Empleados]
+      summary: Listar empleados
+      description: Retorna lista paginada de empleados con filtros
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Número de página
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Tamaño de página
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Búsqueda por nombre, email o cédula
+        - in: query
+          name: department
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por departamento
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, SUSPENDED, VACATION]
+          description: Filtrar por estado
+      responses:
+        '200':
+          description: Lista de empleados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeListWrapper'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Empleados]
+      summary: Crear empleado
+      description: Crea un nuevo empleado en el sistema
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeCreate'
+      responses:
+        '201':
+          description: Empleado creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeWrapper'
+        '409':
+          description: Conflicto (cédula o email duplicado)
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /employees/{id}:
+    get:
+      tags: [Empleados]
+      summary: Obtener empleado
+      description: Retorna los detalles de un empleado específico
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del empleado
+      responses:
+        '200':
+          description: Detalles del empleado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDetailWrapper'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Empleados]
+      summary: Actualizar empleado
+      description: Actualiza la información de un empleado
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdate'
+      responses:
+        '200':
+          description: Empleado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeWrapper'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflicto (cédula o email duplicado)
+
+    delete:
+      tags: [Empleados]
+      summary: Eliminar empleado
+      description: Elimina un empleado del sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Empleado eliminado
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: No se puede eliminar (tiene documentos o usuario)
+
+  /employees/{id}/documents:
+    post:
+      tags: [Documentos]
+      summary: Subir documento
+      description: Sube un documento al expediente de un empleado
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del empleado
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: Archivo a subir
+                tags:
+                  type: string
+                  description: Etiquetas separadas por comas
+                description:
+                  type: string
+                  description: Descripción del documento
+      responses:
+        '201':
+          description: Documento subido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentWrapper'
+        '413':
+          description: Archivo demasiado grande
+        '415':
+          description: Tipo de archivo no permitido
+
+    get:
+      tags: [Documentos]
+      summary: Listar documentos
+      description: Retorna lista de documentos de un empleado
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListWrapper'
+
+  /payroll:
+    get:
+      tags: [Nóminas]
+      summary: Listar nóminas
+      description: Retorna lista de periodos de nómina
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: Fecha de inicio del periodo
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: Fecha de fin del periodo
+        - in: query
+          name: department
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por departamento
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [DRAFT, FINALIZED, PAID]
+      responses:
+        '200':
+          description: Lista de nóminas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollListWrapper'
+
+    post:
+      tags: [Nóminas]
+      summary: Crear nómina
+      description: Crea un nuevo periodo de nómina
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayrollCreate'
+      responses:
+        '201':
+          description: Nómina creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollWrapper'
+
+  /payroll/{id}/generate:
+    post:
+      tags: [Nóminas]
+      summary: Generar items de nómina
+      description: Genera los items de nómina para un periodo
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePayrollRequest'
+      responses:
+        '200':
+          description: Items generados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollDetailWrapper'
+
+  /users:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios
+      description: Retorna lista de usuarios del sistema (solo ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [ADMIN, RRHH, EMPLEADO]
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListWrapper'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: No autenticado o token inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: No tiene permisos para esta acción
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Error de validación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+  schemas:
+    MetaPagination:
+      type: object
+      properties:
+        totalItems:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+      required: [totalItems, page, pageSize, totalPages]
+    
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+        meta:
+          oneOf:
+            - $ref: '#/components/schemas/MetaPagination'
+            - type: object
+      required: [success, data]
+      
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Error de validación"
+            details:
+              type: object
+          required: [code, message]
+      required: [success, error]
+      
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: "VALIDATION_ERROR"
+                message:
+                  type: string
+                  example: "Error de validación"
+                details:
+                  type: object
+                  description: Campo opcional con detalles específicos de los campos fallidos.
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "admin@hrm.com"
+        password:
+          type: string
+          example: "admin123"
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        expiresIn:
+          type: integer
+      required: [accessToken, refreshToken, user, expiresIn]
+
+    AuthResponseWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AuthResponse'
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+      required: [accessToken, expiresIn]
+
+    RefreshTokenWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/RefreshTokenResponse'
+
+
+    EmployeeCreate:
+      type: object
+      required: [nationalId, firstName, lastName, email, departmentId]
+      properties:
+        nationalId:
+          type: string
+          example: "1234567890101"
+        firstName:
+          type: string
+          example: "María"
+        lastName:
+          type: string
+          example: "García"
+        email:
+          type: string
+          format: email
+          example: "maria.garcia@empresa.com"
+        phone:
+          type: string
+          example: "1234-5678"
+        departmentId:
+          type: string
+          format: uuid
+        position:
+          type: string
+          example: "Gerente de RH"
+        hireDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, VACATION]
+          default: ACTIVE
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        nationalId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        departmentId:
+          type: string
+          format: uuid
+        position:
+          type: string
+        hireDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, VACATION]
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nationalId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        position:
+          type: string
+        hireDate:
+          type: string
+          format: date
+        status:
+          type: string
+        department:
+          $ref: '#/components/schemas/Department'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, nationalId, firstName, lastName, email, department, status, createdAt]
+
+    EmployeeDetail:
+      allOf:
+        - $ref: '#/components/schemas/Employee'
+        - type: object
+          properties:
+            documents:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+            user:
+              $ref: '#/components/schemas/User'
+
+    EmployeeWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Employee'
+    
+    EmployeeDetailWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/EmployeeDetail'
+    
+    EmployeeListWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Employee'
+            meta:
+              $ref: '#/components/schemas/MetaPagination'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [ADMIN, RRHH, EMPLEADO]
+        employee:
+          $ref: '#/components/schemas/Employee'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, email, role, createdAt]
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            auditLogs:
+              type: array
+              items:
+                type: object
+
+    UserProfileWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/UserProfile'
+
+    UserListWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            meta:
+              $ref: '#/components/schemas/MetaPagination'
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+      required: [id, name]
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        uploadedBy:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, filename, mimeType, size, createdAt]
+
+    DocumentWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Document'
+    
+    DocumentListWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+            meta:
+              $ref: '#/components/schemas/MetaPagination'
+
+    PayrollCreate:
+      type: object
+      required: [periodStart, periodEnd]
+      properties:
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        departmentId:
+          type: string
+          format: uuid
+        description:
+          type: string
+
+    Payroll:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        description:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, FINALIZED, PAID]
+        department:
+          $ref: '#/components/schemas/Department'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayrollItem'
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, periodStart, periodEnd, status, createdAt]
+
+    PayrollWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Payroll'
+    
+    PayrollDetail:
+      allOf:
+        - $ref: '#/components/schemas/Payroll'
+        - type: object
+          properties:
+            totals:
+              type: object
+              properties:
+                totalGross:
+                  type: number
+                totalNet:
+                  type: number
+                totalDeductions:
+                  type: number
+              required: [totalGross, totalNet, totalDeductions]
+    
+    PayrollDetailWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PayrollDetail'
+    
+    PayrollItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employee:
+          $ref: '#/components/schemas/Employee'
+        grossAmount:
+          type: number
+        netAmount:
+          type: number
+        deductions:
+          type: object
+      required: [id, employee, grossAmount, netAmount, deductions]
+
+    PayrollListWrapper:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Payroll'
+            meta:
+              $ref: '#/components/schemas/MetaPagination'
+
+    GeneratePayrollRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayrollItemInput'
+
+    PayrollItemInput:
+      type: object
+      required: [employeeId, grossAmount]
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        grossAmount:
+          type: number
+        deductions:
+          type: object

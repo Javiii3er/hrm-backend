@@ -27,22 +27,26 @@ export class PayrollController {
 
   async getPayrolls(req: Request, res: Response) {
     try {
-      const [payrolls, total] = (await payrollService.getPayrolls(req.query as any)) as unknown as [any[], number];
-      
-      const page = parseInt(String(req.query.page || 1), 10);
-      const pageSize = parseInt(String(req.query.pageSize || 10), 10);
-      
-      sendSuccess(res, payrolls, 200, {
-        message: 'Nóminas obtenidas',
-        meta: {
-          totalItems: total,
-          page: page,
-          pageSize: pageSize,
-          totalPages: Math.ceil(total / pageSize)
-        }
-      });
+        const result = (await payrollService.getPayrolls(req.query as any)) as unknown as { data: any[], total: number };
+
+        const payrolls = result.data;
+        const total = result.total;
+
+        const page = parseInt(String(req.query.page || 1), 10);
+        const pageSize = parseInt(String(req.query.pageSize || 10), 10);
+      
+        sendSuccess(res, payrolls, 200, {
+          message: 'Nóminas obtenidas',
+          meta: {
+            totalItems: total,
+            page: page,
+            pageSize: pageSize,
+            totalPages: Math.ceil(total / pageSize)
+          }
+        });
     } catch (error: unknown) {
-      sendError(res, 'FETCH_ERROR', 'Error al obtener nóminas', 500);
+        console.error('Error al obtener nóminas (catch):', error);
+        sendError(res, 'FETCH_ERROR', 'Error al obtener nóminas', 500);
     }
   }
 

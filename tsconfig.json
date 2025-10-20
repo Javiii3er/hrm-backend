@@ -1,3 +1,4 @@
+// tsconfig.json
 {
   "compilerOptions": {
     "module": "nodenext", 
@@ -17,8 +18,9 @@
     
     "skipLibCheck": true,
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node"] 
   },
-  "include": ["src/**/*"], 
-  "exclude": ["node_modules", "dist", "uploads", "scripts", "prisma"] 
+  "include": ["src/**/*", "types"],  
+  "exclude": ["node_modules", "dist", "uploads", "prisma",
+  "src/types/api.gen.ts"]
 }

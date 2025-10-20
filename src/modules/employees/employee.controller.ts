@@ -36,23 +36,27 @@ export class EmployeeController {
 
   async getEmployees(req: Request, res: Response) {
     try {
-      const [employees, total] = (await employeeService.getEmployees(req.query as any)) as unknown as [any[], number]; 
+        const result = (await employeeService.getEmployees(req.query as any)) as unknown as { data: any[], total: number }; 
 
-      const page = parseInt(String(req.query.page || 1), 10);
-      const pageSize = parseInt(String(req.query.pageSize || 10), 10);
+        const employees = result.data;
+        const total = result.total;
+
+        const page = parseInt(String(req.query.page || 1), 10);
+        const pageSize = parseInt(String(req.query.pageSize || 10), 10);
       
-      sendSuccess(res, employees, 200, {
-        message: 'Listado de empleados',
-        meta: {
-          totalItems: total,
-          page: page,
-          pageSize: pageSize,
-          totalPages: Math.ceil(total / pageSize)
-        }
-      });
+        sendSuccess(res, employees, 200, {
+          message: 'Listado de empleados',
+          meta: {
+            totalItems: total,
+            page: page,
+            pageSize: pageSize,
+            totalPages: Math.ceil(total / pageSize)
+          }
+        });
       
     } catch (error: unknown) {
-      sendError(res, 'FETCH_ERROR', 'Error al obtener empleados', 500);
+        console.error('Error al obtener empleados (catch):', error); 
+        sendError(res, 'FETCH_ERROR', 'Error al obtener empleados', 500);
     }
   }
 
