@@ -20,12 +20,11 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-
 app.use(compression());
 app.use(cors({
   origin: env.NODE_ENV === 'production' 
     ? ['https://tudominio.com'] 
-    : ['http://localhost:3000', 'http://localhost:5173'],
+    : ['http://localhost:4000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 }));
 
@@ -41,7 +40,6 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payroll', payrollRoutes); 
 app.use('/api/users', userRoutes);
-
 
 app.get('/health', (req, res) => {
   res.status(200).json({

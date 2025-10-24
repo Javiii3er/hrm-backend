@@ -26,20 +26,19 @@ async function startServer() {
 }
 
 async function gracefulShutdown(signal: string) {
-    console.log(`\n Recibida señal ${signal}, cerrando servidor...`);
+  console.log(`\n Recibida señal ${signal}, cerrando servidor...`);
+  
+  server.close(async () => {
+    console.log('Express Server cerrado.');
     
-    server.close(async () => {
-        console.log('Express Server cerrado.');
-        
-        
-        console.log('Proceso terminado.');
-        process.exit(0);
-    });
+    console.log('Proceso terminado.');
+    process.exit(0);
+  });
 
-    setTimeout(() => {
-        console.error(' Cierre forzado por timeout.');
-        process.exit(1);
-    }, 10000);
+  setTimeout(() => {
+    console.error(' Cierre forzado por timeout.');
+    process.exit(1);
+  }, 10000);
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

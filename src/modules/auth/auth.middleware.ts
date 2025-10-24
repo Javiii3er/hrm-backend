@@ -1,3 +1,4 @@
+// src/modules/auth/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../core/config/database.js';
@@ -8,9 +9,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    // Asumo que 'role' es un enum de Prisma, pero lo mantenemos como string por ahora.
     role: string; 
-    // SOLUCIÓN: Añadir 'null' para coincidir con la respuesta de Prisma
     employeeId?: string | null; 
   };
 }
@@ -30,7 +29,6 @@ export const authenticateToken = async (
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as any;
     
-    // Aquí el tipo que devuelve Prisma incluye | null
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { 
@@ -40,13 +38,12 @@ export const authenticateToken = async (
         employeeId: true 
       }
     });
-    // El error 2322 se resuelve con el cambio en la interfaz de arriba.
 
     if (!user) {
       return sendError(res, 'UNAUTHORIZED', 'Usuario no encontrado', 401);
     }
 
-    req.user = user; // Aceptado porque req.user.employeeId ahora es string | null | undefined
+    req.user = user; 
     next();
   } catch (error: unknown) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -62,7 +59,6 @@ export const authenticateToken = async (
 };
 
 export const authorize = (...allowedRoles: string[]) => {
-  // ... (el resto del código es correcto)
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return sendError(res, 'UNAUTHORIZED', 'Usuario no autenticado', 401);
