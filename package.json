@@ -9,9 +9,9 @@
     "start": "node dist/server.js",
     "build": "tsc",
     "db:push": "npx prisma db push",
-    "db:seed": "tsx --tsconfig scripts.tsconfig.json scripts/seed.ts",
+  "db:seed": "tsx --tsconfig tsconfig.scripts.json scripts/seed.ts",
     "db:reset": "npm run db:push && npm run db:seed",
-    "test:api": "tsx --tsconfig scripts.tsconfig.json scripts/test-api.ts",
+  "test:api": "tsx --tsconfig tsconfig.scripts.json scripts/test-api.ts",
     "test:all": "npm run test:api",
     "docs:generate-types": "ts-node --files --project tsconfig.scripts.json scripts/generate-types-quick.ts",
     "docs:validate-openapi": "ts-node --project tsconfig.scripts.json scripts/validate-openapi.cts"
