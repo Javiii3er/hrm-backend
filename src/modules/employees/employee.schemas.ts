@@ -23,8 +23,12 @@ export const EmployeeCreateSchema = z.object({
     .optional()
     .or(z.literal(''))
     .transform(val => val === '' ? undefined : val),
+
+  // ✅ Cambio aquí: permitimos IDs como "dep-001"
   departmentId: z.string()
-    .uuid('ID de departamento inválido'),
+    .min(3, 'El departamento es obligatorio')
+    .regex(/^[a-zA-Z0-9-_]+$/, 'Formato de ID de departamento inválido'),
+
   position: z.string()
     .min(2, 'El puesto debe tener al menos 2 caracteres')
     .max(100, 'El puesto es demasiado largo')
@@ -40,6 +44,7 @@ export const EmployeeCreateSchema = z.object({
     .default('ACTIVE')
 });
 
+// ✅ Igualamos el esquema de actualización
 export const EmployeeUpdateSchema = EmployeeCreateSchema.partial();
 
 export const EmployeeQuerySchema = z.object({

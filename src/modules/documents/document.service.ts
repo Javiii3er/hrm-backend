@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class DocumentService {
-  private uploadsDir = path.join(__dirname, '../../../uploads'); 
+  private uploadsDir = path.join(__dirname, '../../../uploads');
 
   constructor() {
     this.ensureUploadsDir();
@@ -25,61 +25,61 @@ export class DocumentService {
     }
   }
 
+  // ✅ FIX: usa el archivo físico de multer.diskStorage
   async uploadDocument(
-    employeeId: string, 
-    file: Express.Multer.File, 
-    data: DocumentUploadDTO, 
+    employeeId: string,
+    file: Express.Multer.File,
+    data: DocumentUploadDTO,
     userId: string
   ) {
     const employee = await prisma.employee.findUnique({
-      where: { id: employeeId }
+      where: { id: employeeId },
     });
 
     if (!employee) {
       throw new Error('EMPLOYEE_NOT_FOUND');
     }
 
-    const maxFileSize = env.UPLOAD_MAX_FILE_SIZE;
+    // Verificar que multer haya recibido el archivo
+    if (!file || !file.path) {
+      throw new Error('NO_FILE_RECEIVED');
+    }
+
+    const maxFileSize = env.UPLOAD_MAX_FILE_SIZE || 10 * 1024 * 1024;
     if (file.size > maxFileSize) {
       throw new Error('FILE_TOO_LARGE');
     }
-    
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `${employeeId}_${Date.now()}${fileExtension}`;
-    const filePath = path.join(this.uploadsDir, fileName);
 
-    try {
-      await fs.writeFile(filePath, file.buffer);
-    } catch (error) {
-      throw new Error('FILE_SAVE_ERROR');
-    }
-    
+    // ✅ Ya no escribimos el archivo manualmente
+    // multer lo guarda en "file.path" automáticamente
+    const storageKey = path.basename(file.path);
+
     const document = await prisma.document.create({
       data: {
         employeeId,
         filename: file.originalname,
-        storageKey: fileName, 
+        storageKey,
         mimeType: file.mimetype,
         size: file.size,
         uploadedBy: userId,
-        tags: data.tags && data.tags.length > 0 ? data.tags : undefined, 
-        description: data.description 
+        tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
+        description: data.description,
       },
       include: {
         employee: {
           select: {
             id: true,
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         uploader: {
           select: {
             id: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return document;
@@ -87,7 +87,7 @@ export class DocumentService {
 
   async getEmployeeDocuments(employeeId: string, query: DocumentQueryDTO) {
     const employee = await prisma.employee.findUnique({
-      where: { id: employeeId }
+      where: { id: employeeId },
     });
 
     if (!employee) {
@@ -112,15 +112,15 @@ export class DocumentService {
           uploader: {
             select: {
               id: true,
-              email: true
-            }
-          }
+              email: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
       }),
-      prisma.document.count({ where })
+      prisma.document.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / pageSize);
@@ -132,18 +132,18 @@ export class DocumentService {
           page,
           pageSize,
           total,
-          totalPages
-        }
-      }
+          totalPages,
+        },
+      },
     };
   }
 
   async downloadDocument(employeeId: string, documentId: string) {
     const document = await prisma.document.findFirst({
-      where: { 
+      where: {
         id: documentId,
-        employeeId 
-      }
+        employeeId,
+      },
     });
 
     if (!document) {
@@ -160,16 +160,16 @@ export class DocumentService {
 
     return {
       document,
-      filePath
+      filePath,
     };
   }
 
   async deleteDocument(employeeId: string, documentId: string, userId: string, userRole: string) {
     const document = await prisma.document.findFirst({
-      where: { 
+      where: {
         id: documentId,
-        employeeId 
-      }
+        employeeId,
+      },
     });
 
     if (!document) {
@@ -184,11 +184,11 @@ export class DocumentService {
     try {
       await fs.unlink(filePath);
     } catch (error) {
-      console.warn('Advertencia: No se pudo eliminar el archivo físico. Error:', error); 
+      console.warn('Advertencia: No se pudo eliminar el archivo físico. Error:', error);
     }
 
     await prisma.document.delete({
-      where: { id: documentId }
+      where: { id: documentId },
     });
 
     return { success: true, message: 'Documento eliminado correctamente' };
@@ -196,7 +196,7 @@ export class DocumentService {
 
   async getDocumentStats(employeeId: string) {
     const employee = await prisma.employee.findUnique({
-      where: { id: employeeId }
+      where: { id: employeeId },
     });
 
     if (!employee) {
@@ -204,27 +204,27 @@ export class DocumentService {
     }
 
     const totalDocuments = await prisma.document.count({
-      where: { employeeId }
+      where: { employeeId },
     });
 
     const totalSize = await prisma.document.aggregate({
       where: { employeeId },
-      _sum: { size: true }
+      _sum: { size: true },
     });
 
     const byType = await prisma.document.groupBy({
       by: ['mimeType'],
       where: { employeeId },
-      _count: { id: true }
+      _count: { id: true },
     });
 
     return {
       total: totalDocuments,
       totalSize: totalSize._sum.size || 0,
-      byType: byType.map(type => ({
+      byType: byType.map((type) => ({
         mimeType: type.mimeType,
-        count: type._count.id
-      }))
+        count: type._count.id,
+      })),
     };
   }
 }

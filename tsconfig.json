@@ -4,7 +4,12 @@
     "module": "nodenext", 
     "target": "es2022",
     "moduleResolution": "nodenext",
-    
+
+    "baseUrl": "./src", 
+    "paths": {
+      "@/*": ["*"] 
+    },
+  
     "rootDir": "./src", 
     "outDir": "./dist",
 
@@ -15,12 +20,12 @@
 
     "verbatimModuleSyntax": false, 
     "isolatedModules": true, 
-    
+
     "skipLibCheck": true,
     "sourceMap": true,
     "types": ["node"] 
   },
-  "include": ["src/**/*", "types"],  
+  "include": ["src/**/*", "types"],
   "exclude": ["node_modules", "dist", "uploads", "prisma",
   "src/types/api.gen.ts"]
 }
