@@ -5,10 +5,6 @@ import { prisma } from "../../core/config/database.js";
 
 const router = Router();
 
-/**
- * GET /api/departments
- * Devuelve todos los departamentos (id y nombre)
- */
 router.get("/", async (req, res) => {
   try {
     const departments = await prisma.department.findMany({

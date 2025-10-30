@@ -1,0 +1,16 @@
+[
+  {
+    "id": "9ce03f3e-5adb-466c-93a2-4c5503a6064b",
+    "periodo": "2022-09-01 - 2022-12-10",
+    "departamento": "Finanzas",
+    "totalItems": 1,
+    "estado": "FINALIZED"
+  },
+  {
+    "id": "0800dd0a-5554-469a-b237-223a843e831a",
+    "periodo": "2022-01-14 - 2022-02-15",
+    "departamento": "Recursos Humanos",
+    "totalItems": 0,
+    "estado": "DRAFT"
+  }
+]

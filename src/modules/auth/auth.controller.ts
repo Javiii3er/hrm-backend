@@ -1,5 +1,4 @@
 // src/modules/auth/auth.controller.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service.js';
 import { sendSuccess, sendError } from '../../core/utils/response.js';
@@ -28,21 +27,19 @@ declare module 'express-serve-static-core' {
 
 export class AuthController {
     
-    // CORRECCIÓN: Usamos arrow function (=>) para enlazar 'this' a la instancia, resolviendo el 404/routing.
-    // Mantenemos el debug para el siguiente paso.
     login = async (req: Request<{}, {}, LoginRequest>, res: Response, next: NextFunction) => {
         try {
-            // *** DEBUG AÑADIDO: Vemos si la petición llega al controlador
+
             console.log('*** DEBUG: Petición de LOGIN recibida para:', req.body.email); 
             
             const result = await authService.login(req.body);
             
-            // *** DEBUG AÑADIDO: Si llegamos aquí, fue exitoso
+
             console.log('*** DEBUG: Login EXITOSO para:', req.body.email); 
             
             sendSuccess(res, result, 200); 
         } catch (error: unknown) { 
-            // *** DEBUG AÑADIDO: Si falla, vemos el error
+     
             console.error('*** ERROR EN EL CONTROLADOR DE LOGIN:', error); 
 
             if (!(error instanceof Error)) {
@@ -61,7 +58,6 @@ export class AuthController {
         }
     }
 
-    // CORRECCIÓN: Aplicamos arrow function a todos los métodos
     refreshToken = async (req: Request<{}, {}, RefreshTokenRequest>, res: Response, next: NextFunction) => {
         try {
             const result = await authService.refreshToken(req.body);
@@ -86,7 +82,6 @@ export class AuthController {
         }
     }
 
-    // CORRECCIÓN: Aplicamos arrow function a todos los métodos
     changePassword = async (req: Request<{}, {}, ChangePasswordRequest>, res: Response, next: NextFunction) => {
         try {
             if (!req.user) {
@@ -114,7 +109,6 @@ export class AuthController {
         }
     }
 
-    // CORRECCIÓN: Aplicamos arrow function a todos los métodos
     getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
         try {
             if (!req.user) {
@@ -139,7 +133,6 @@ export class AuthController {
         }
     }
 
-    // CORRECCIÓN: Aplicamos arrow function a todos los métodos
     logout = async (req: Request, res: Response, next: NextFunction) => {
         try {
             if (!req.user) {

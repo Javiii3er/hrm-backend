@@ -1,0 +1,23 @@
+[
+  {
+    "id": "9d7e36c0-a262-48f7-84b0-7dddc1c40af7",
+    "periodo": "2024-10-01 - 2024-10-15",
+    "departamento": "Tecnología",
+    "totalItems": 2,
+    "estado": "DRAFT"
+  },
+  {
+    "id": "def2cf24-08a2-4909-abc3-86b0b0f0f945",
+    "periodo": "2024-10-01 - 2024-10-15",
+    "departamento": "Recursos Humanos",
+    "totalItems": 1,
+    "estado": "FINALIZED"
+  },
+  {
+    "id": "0800dd0a-5554-469a-b237-223a843e831a",
+    "periodo": "2022-01-14 - 2022-02-15",
+    "departamento": "Recursos Humanos",
+    "totalItems": 0,
+    "estado": "DRAFT"
+  }
+]

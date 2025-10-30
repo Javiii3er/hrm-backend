@@ -1,0 +1,34 @@
+[
+  {
+    "id": "83adaa29-11a7-4fdd-8fc7-2f59333d079f",
+    "empleado": "Jorge Lopez",
+    "departamento": "Finanzas",
+    "archivo": "AnÃ¡lisis de Sistemas II - Ejercicio I - Procesos del Aplicativo en el Caso de Uso --- Javier Rivera.pdf",
+    "fecha": "2025-10-30",
+    "tamaño": "169.2763671875 KB"
+  },
+  {
+    "id": "8d91acf5-6c2c-4b04-8213-25df2c77ab0e",
+    "empleado": "Laura Hernández",
+    "departamento": "Recursos Humanos",
+    "archivo": "Logo UMG.png",
+    "fecha": "2025-10-25",
+    "tamaño": "331.228515625 KB"
+  },
+  {
+    "id": "52a74023-745d-4ccf-986c-1c234c960ea1",
+    "empleado": "María García",
+    "departamento": "Recursos Humanos",
+    "archivo": "contrato_maria_garcia.pdf",
+    "fecha": "2025-10-13",
+    "tamaño": "2000.5625 KB"
+  },
+  {
+    "id": "59d9cd8c-30ff-4a6b-9634-637efefe7dfe",
+    "empleado": "Carlos López",
+    "departamento": "Tecnología",
+    "archivo": "cv_carlos_lopez.docx",
+    "fecha": "2025-10-13",
+    "tamaño": "150 KB"
+  }
+]

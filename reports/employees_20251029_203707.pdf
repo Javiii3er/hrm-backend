@@ -1,0 +1,58 @@
+[
+  {
+    "id": "838a69bb-2962-4c2e-8ee2-b7fb20d87aed",
+    "nombre": "Ana Martínez",
+    "departamento": "Finanzas",
+    "estado": "ACTIVE",
+    "correo": "ana.martinez@empresa.com",
+    "telefono": "1234-5680"
+  },
+  {
+    "id": "fb8938b0-074a-4c2e-bd95-16d33df00f8d",
+    "nombre": "Carlos López",
+    "departamento": "Tecnología",
+    "estado": "ACTIVE",
+    "correo": "carlos.lopez@empresa.com",
+    "telefono": "1234-5679"
+  },
+  {
+    "id": "5acfc1b0-4f9e-4cb9-b15a-b8b7bb9f4384",
+    "nombre": "Jorge Lopez",
+    "departamento": "Finanzas",
+    "estado": "VACATION",
+    "correo": "jorgelopezzz@empresa.com",
+    "telefono": "234567888"
+  },
+  {
+    "id": "4c7d4ee5-35ac-4ede-9403-db9fa348c801",
+    "nombre": "Laura Hernández",
+    "departamento": "Tecnología",
+    "estado": "VACATION",
+    "correo": "laura.hernandez@empresa.com",
+    "telefono": "1234-5682"
+  },
+  {
+    "id": "7ec2c092-89a6-48ed-972d-8ce80221b98c",
+    "nombre": "Laura Hernández",
+    "departamento": "Recursos Humanos",
+    "estado": "SUSPENDED",
+    "correo": "laura.hernandezzz@empresa.com",
+    "telefono": "12345682"
+  },
+  {
+    "id": "fb0cee3d-1f80-4a6d-9e88-9ab67c4aadcc",
+    "nombre": "María García",
+    "departamento": "Recursos Humanos",
+    "estado": "ACTIVE",
+    "correo": "maria.garcia@empresa.com",
+    "telefono": "1234-5678"
+  },
+  {
+    "id": "799aebf9-42aa-46b9-9097-83332d7b7281",
+    "nombre": "Pedro Ramírez",
+    "departamento": "Ventas",
+    "estado": "ACTIVE",
+    "correo": "pedro.ramirez@empresa.com",
+    "telefono": "1234-5681"
+  }
+]

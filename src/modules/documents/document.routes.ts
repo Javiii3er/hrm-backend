@@ -9,14 +9,12 @@ import { authenticateJWT, authorize } from '../../core/middleware/authGuard.js';
 import { upload } from '../../core/middleware/upload.js';
 import { DocumentUploadSchema, DocumentQuerySchema } from './document.schemas.js';
 
-// Necesario para construir rutas absolutas correctamente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
 router.use(authenticateJWT); 
 
-// ✅ 1️⃣ Ruta global para listar documentos (usada por el frontend)
 router.get('/',
   authorize('ADMIN', 'RRHH'),
   async (req, res) => {
@@ -66,14 +64,12 @@ router.get('/',
   }
 );
 
-// ✅ 2️⃣ Ruta global para descargar documentos (ahora con ruta absoluta correcta)
 router.get('/:docId/download',
   authorize('ADMIN', 'RRHH', 'EMPLEADO'),
   async (req, res) => {
     try {
       const { docId } = req.params;
 
-      // Buscar el documento en la base de datos
       const document = await prisma.document.findUnique({
         where: { id: docId },
         include: {
@@ -88,11 +84,9 @@ router.get('/:docId/download',
         });
       }
 
-      // Construir ruta absoluta al archivo físico
       const uploadsDir = path.join(__dirname, '../../../uploads');
       const filePath = path.join(uploadsDir, document.storageKey);
 
-      // Verificar que el archivo exista
       try {
         await fs.access(filePath);
       } catch {
@@ -101,13 +95,10 @@ router.get('/:docId/download',
           error: { code: 'FILE_NOT_FOUND', message: 'Archivo no encontrado en el servidor' },
         });
       }
-
-      // Nombre legible para el archivo descargado
       const safeName = document.employee
         ? `${document.employee.firstName}_${document.employee.lastName}_${document.filename}`
         : document.filename;
 
-      // Enviar archivo al cliente
       res.download(filePath, safeName, (err) => {
         if (err) {
           console.error('Error al enviar el archivo:', err);
@@ -128,7 +119,6 @@ router.get('/:docId/download',
   }
 );
 
-// ✅ 3️⃣ Rutas por empleado (mantén todo igual)
 router.post('/:id/documents',
   authorize('ADMIN', 'RRHH'),
   upload.single('document'),

@@ -2,7 +2,7 @@
 const { writeFileSync } = require('fs');
 
 function generateQuickTypes() {
-  console.log('⚡ Generando tipos TypeScript rápidos...');
+  console.log('Generando tipos TypeScript rápidos...');
   
   const typesContent = `// =============================================
 // TIPOS PARA FRONTEND - GENERADOS RÁPIDAMENTE

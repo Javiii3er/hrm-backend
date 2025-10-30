@@ -1,31 +1,37 @@
-// tsconfig.json
 {
   "compilerOptions": {
-    "module": "nodenext", 
-    "target": "es2022",
-    "moduleResolution": "nodenext",
-
-    "baseUrl": "./src", 
-    "paths": {
-      "@/*": ["*"] 
-    },
-  
-    "rootDir": "./src", 
-    "outDir": "./dist",
-
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-
     "strict": true,
-
-    "verbatimModuleSyntax": false, 
-    "isolatedModules": true, 
-
     "skipLibCheck": true,
+    
+    "noEmit": true, 
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+
+    "baseUrl": "./src",
+    "outDir": "dist",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@modules/*": ["modules/*"],
+      "@/*": ["*"] 
+    },
+    
     "sourceMap": true,
-    "types": ["node"] 
+    "types": ["node"],
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false
   },
-  "include": ["src/**/*", "types"],
-  "exclude": ["node_modules", "dist", "uploads", "prisma",
-  "src/types/api.gen.ts"]
+  "include": ["src/**/*.ts", "src/**/*", "types"],
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "uploads", 
+    "prisma",
+    "src/types/api.gen.ts"
+  ]
 }

@@ -25,7 +25,6 @@ export class DocumentService {
     }
   }
 
-  // ✅ FIX: usa el archivo físico de multer.diskStorage
   async uploadDocument(
     employeeId: string,
     file: Express.Multer.File,
@@ -40,7 +39,6 @@ export class DocumentService {
       throw new Error('EMPLOYEE_NOT_FOUND');
     }
 
-    // Verificar que multer haya recibido el archivo
     if (!file || !file.path) {
       throw new Error('NO_FILE_RECEIVED');
     }
@@ -50,8 +48,6 @@ export class DocumentService {
       throw new Error('FILE_TOO_LARGE');
     }
 
-    // ✅ Ya no escribimos el archivo manualmente
-    // multer lo guarda en "file.path" automáticamente
     const storageKey = path.basename(file.path);
 
     const document = await prisma.document.create({

@@ -7,125 +7,125 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
-  role         UserRole  @default(EMPLEADO)
-  employeeId   String?   @unique            
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  employee     Employee? @relation(fields: [employeeId], references: [id])
-  documents    Document[]
+  role         UserRole   @default(EMPLEADO)
+  employeeId   String?    @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   auditLogs    AuditLog[]
+  documents    Document[]
+  employee     Employee?  @relation(fields: [employeeId], references: [id])
 
   @@map("users")
 }
 
 model Employee {
-  id            String         @id @default(uuid())
-  nationalId    String         @unique
-  firstName     String
-  lastName      String
-  email         String
-  phone         String?
-  departmentId  String
-  position      String?
-  hireDate      DateTime?
-  status        EmployeeStatus @default(ACTIVE)
-  metadata      Json?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String         @id @default(uuid())
+  nationalId   String         @unique
+  firstName    String
+  lastName     String
+  email        String
+  phone        String?
+  departmentId String
+  position     String?
+  hireDate     DateTime?
+  status       EmployeeStatus @default(ACTIVE)
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  documents    Document[]
+  department   Department     @relation(fields: [departmentId], references: [id])
+  payrollItems PayrollItem[]
+  payrolls     Payroll[]      @relation("EmployeePayrolls")
+  user         User?
 
-  department    Department     @relation(fields: [departmentId], references: [id])
-  user          User?          
-  documents     Document[]
-  payrollItems  PayrollItem[]
-
+  @@index([departmentId], map: "employees_departmentId_fkey")
   @@map("employees")
 }
 
 model Department {
-  id           String     @id 
-  name         String
-  description  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  employees    Employee[]
-  payrolls     Payroll[]
+  id          String     @id
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  employees   Employee[]
+  payrolls    Payroll[]
 
   @@map("departments")
 }
 
-
-
 model Document {
-  id          String    @id @default(uuid())
-  employeeId  String
-  filename    String
-  storageKey  String   @unique 
-  mimeType    String?
-  size        Int?
-  uploadedBy  String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  tags        Json?
-  description String?   @db.VarChar(500) 
-  employee    Employee  @relation(fields: [employeeId], references: [id])
-  uploader    User      @relation(fields: [uploadedBy], references: [id])
+  id          String   @id @default(uuid())
+  employeeId  String
+  filename    String
+  storageKey  String   @unique
+  mimeType    String?
+  size        Int?
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+  tags        Json?
+  description String?  @db.VarChar(500)
+  updatedAt   DateTime @updatedAt
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
 
-  @@index([employeeId])
-  @@map("documents")
+  @@index([employeeId])
+  @@index([uploadedBy], map: "documents_uploadedBy_fkey")
+  @@map("documents")
 }
 
 model Payroll {
-id               String        @id @default(uuid())
-periodStart      DateTime
-periodEnd        DateTime
-description      String?
-departmentId     String?
-status           PayrollStatus @default(DRAFT)
-createdAt        DateTime      @default(now())
-updatedAt        DateTime      @updatedAt
+  id           String        @id @default(uuid())
+  periodStart  DateTime
+  periodEnd    DateTime
+  departmentId String?
+  status       PayrollStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  description  String?
+  employeeId   String?
+  items        PayrollItem[]
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  employee     Employee?     @relation("EmployeePayrolls", fields: [employeeId], references: [id])
 
-department       Department?   @relation(fields: [departmentId], references: [id])
-items            PayrollItem[]
-
-@@map("payrolls")
+  @@index([departmentId], map: "payrolls_departmentId_fkey")
+  @@index([employeeId], map: "payrolls_employeeId_fkey")
+  @@map("payrolls")
 }
 
 model PayrollItem {
-  id            String    @id @default(uuid())
-  payrollId     String
-  employeeId    String
-  grossAmount   Float
-  netAmount     Float
-  deductions    Json?
-  createdAt     DateTime  @default(now())
+  id          String   @id @default(uuid())
+  payrollId   String
+  employeeId  String
+  grossAmount Float
+  netAmount   Float
+  deductions  Json?
+  createdAt   DateTime @default(now())
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  payroll     Payroll  @relation(fields: [payrollId], references: [id])
 
-  payroll       Payroll   @relation(fields: [payrollId], references: [id])
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-
+  @@index([employeeId], map: "payroll_items_employeeId_fkey")
+  @@index([payrollId], map: "payroll_items_payrollId_fkey")
   @@map("payroll_items")
 }
 
 model AuditLog {
-  id            String    @id @default(uuid())
-  entity        String
-  action        String
-  userId        String
-  before        Json?
-  after         Json?
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(uuid())
+  entity    String
+  action    String
+  userId    String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 
-  user          User      @relation(fields: [userId], references: [id])
-
+  @@index([userId], map: "audit_logs_userId_fkey")
   @@map("audit_logs")
 }
-
 
 enum UserRole {
   ADMIN

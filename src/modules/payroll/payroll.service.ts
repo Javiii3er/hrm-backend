@@ -1,27 +1,26 @@
-// src/modules/payroll/payroll.service.ts
 import { prisma } from '../../core/config/database.js';
 import { Prisma } from '@prisma/client';
-import { 
-  PayrollCreateDTO, 
-  PayrollUpdateDTO, 
+import {
+  PayrollCreateDTO,
+  PayrollUpdateDTO,
   PayrollQueryDTO,
   GeneratePayrollDTO,
   PayrollItemDTO
 } from './payroll.schemas.js';
 
 interface EmployeeWithDepartment {
-    id: string;
-    departmentId: string;
-    status: string;
-    [key: string]: any; 
+  id: string;
+  departmentId: string;
+  status: string;
+  [key: string]: any;
 }
 
-
 export class PayrollService {
+
   async createPayroll(data: PayrollCreateDTO) {
-    const startDate = data.periodStart;
-    const endDate = data.periodEnd;
-    
+    const startDate = new Date(data.periodStart);
+    const endDate = new Date(data.periodEnd);
+
     if (startDate.getTime() >= endDate.getTime()) {
       throw new Error('INVALID_DATE_RANGE');
     }
@@ -41,59 +40,62 @@ export class PayrollService {
       throw new Error('OVERLAPPING_PERIOD');
     }
 
-    if (data.departmentId) {
+    let connectDepartment = undefined;
+    if (data.departmentId && data.departmentId.trim() !== '') {
       const department = await prisma.department.findUnique({
-        where: { id: data.departmentId }
+        where: { id: data.departmentId.trim() }
       });
 
       if (!department) {
         throw new Error('DEPARTMENT_NOT_FOUND');
       }
+
+      connectDepartment = { connect: { id: department.id } };
     }
 
-    const payroll = await prisma.payroll.create({
-      data: {
-        periodStart: startDate,
-        periodEnd: endDate,
-        departmentId: data.departmentId,
-        description: data.description,
-        status: 'DRAFT'
-      },
-      include: {
-        department: { select: { id: true, name: true } },
-        items: { 
-          include: { 
-            employee: { 
-              select: { 
-                id: true, firstName: true, lastName: true, position: true 
-              } 
-            } 
-          } 
+    try {
+      const payroll = await prisma.payroll.create({
+        data: {
+          periodStart: startDate,
+          periodEnd: endDate,
+          description: data.description || null,
+          status: 'DRAFT',
+          ...(connectDepartment ? { department: connectDepartment } : {})
+        },
+        include: {
+          department: { select: { id: true, name: true } },
+          items: {
+            include: {
+              employee: {
+                select: { id: true, firstName: true, lastName: true, position: true }
+              }
+            }
+          }
         }
-      }
-    });
+      });
 
-    return payroll;
+      return payroll;
+    } catch (error) {
+      console.error(' Prisma error al crear nómina:', error);
+      throw error;
+    }
   }
 
   async getPayrolls(query: PayrollQueryDTO) {
     const { startDate, endDate, department, status } = query;
-    
+
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
     const pageSize = Number(query.pageSize) > 0 ? Number(query.pageSize) : 10;
-    
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.PayrollWhereInput = {};
 
     if (startDate) {
       const start = new Date(startDate);
-      const end = endDate ? new Date(endDate) : new Date(); 
-      
+      const end = endDate ? new Date(endDate) : new Date();
       where.periodStart = { gte: start };
       where.periodEnd = { lte: end };
     }
-
 
     if (department) {
       where.departmentId = department;
@@ -138,6 +140,7 @@ export class PayrollService {
       where: { id },
       include: {
         department: { select: { id: true, name: true, description: true } },
+        employee: { select: { id: true, firstName: true, lastName: true } }, 
         items: {
           include: {
             employee: {
@@ -175,45 +178,49 @@ export class PayrollService {
 
     await prisma.payrollItem.deleteMany({ where: { payrollId: id } });
 
-
     let itemsToCreate: PayrollItemDTO[] = [];
 
     if (data.items && data.items.length > 0) {
       itemsToCreate = data.items;
     } else {
-      const employees = await prisma.employee.findMany({
-        where: { 
-          status: 'ACTIVE',
-          ...(payroll.departmentId && { departmentId: payroll.departmentId })
-        },
-        include: { department: true }
-      });
+      let employees;
+
+      if (payroll.employeeId) {
+        const employee = await prisma.employee.findUnique({
+          where: { id: payroll.employeeId },
+          include: { department: true }
+        });
+        employees = employee ? [employee] : [];
+      } else {
+        employees = await prisma.employee.findMany({
+          where: {
+            status: 'ACTIVE',
+            ...(payroll.departmentId && { departmentId: payroll.departmentId })
+          },
+          include: { department: true }
+        });
+      }
 
       if (employees.length === 0) {
         throw new Error('NO_EMPLOYEES_FOUND');
       }
 
       itemsToCreate = employees.map(employee => ({
-          employeeId: employee.id,
-          grossAmount: this.calculateGrossSalary(employee as EmployeeWithDepartment), 
-          deductions: {}
+        employeeId: employee.id,
+        grossAmount: this.calculateGrossSalary(employee as EmployeeWithDepartment),
+        deductions: {}
       }));
     }
 
     const payrollItemsData = await Promise.all(
       itemsToCreate.map(async (item) => {
         const employee = await prisma.employee.findUnique({ where: { id: item.employeeId } });
+        if (!employee) throw new Error(`EMPLOYEE_NOT_FOUND: ${item.employeeId}`);
 
-        if (!employee) {
-          throw new Error(`EMPLOYEE_NOT_FOUND: ${item.employeeId}`);
-        }
-        
         const deductions = await this.calculateDeductions(item.grossAmount, item.deductions);
-        
         const totalDeductions = Object.values(deductions).reduce((sum, amount) => sum + amount, 0);
-        
         const netAmount = item.grossAmount - totalDeductions;
-        
+
         return {
           payrollId: id,
           employeeId: item.employeeId,
@@ -223,7 +230,7 @@ export class PayrollService {
         };
       })
     );
-    
+
     await prisma.payrollItem.createMany({ data: payrollItemsData });
 
     return this.getPayrollById(id);
@@ -235,42 +242,26 @@ export class PayrollService {
       include: { items: true }
     });
 
-    if (!payroll) {
-      throw new Error('PAYROLL_NOT_FOUND');
-    }
-    if (payroll.status !== 'DRAFT') {
-      throw new Error('PAYROLL_ALREADY_FINALIZED');
-    }
-    if (payroll.items.length === 0) {
-      throw new Error('NO_PAYROLL_ITEMS');
-    }
+    if (!payroll) throw new Error('PAYROLL_NOT_FOUND');
+    if (payroll.status !== 'DRAFT') throw new Error('PAYROLL_ALREADY_FINALIZED');
+    if (payroll.items.length === 0) throw new Error('NO_PAYROLL_ITEMS');
 
-    const updatedPayroll = await prisma.payroll.update({
+    return await prisma.payroll.update({
       where: { id },
       data: { status: 'FINALIZED' },
       include: {
         department: { select: { id: true, name: true } },
-        items: { 
-          include: { 
-            employee: { select: { firstName: true, lastName: true } } 
-          } 
-        }
+        employee: { select: { id: true, firstName: true, lastName: true } },
+        items: { include: { employee: { select: { firstName: true, lastName: true } } } }
       }
     });
-
-    return updatedPayroll;
   }
 
   async deletePayroll(id: string) {
     const payroll = await prisma.payroll.findUnique({ where: { id } });
 
-    if (!payroll) {
-      throw new Error('PAYROLL_NOT_FOUND');
-    }
-
-    if (payroll.status !== 'DRAFT') {
-      throw new Error('PAYROLL_NOT_DELETABLE');
-    }
+    if (!payroll) throw new Error('PAYROLL_NOT_FOUND');
+    if (payroll.status !== 'DRAFT') throw new Error('PAYROLL_NOT_DELETABLE');
 
     await prisma.$transaction([
       prisma.payrollItem.deleteMany({ where: { payrollId: id } }),
@@ -281,18 +272,19 @@ export class PayrollService {
   }
 
   private calculateGrossSalary(employee: EmployeeWithDepartment): number {
-    return 5000; 
+    return 5000;
   }
 
-  private async calculateDeductions(grossAmount: number, customDeductions: Record<string, number> = {}): Promise<Record<string, number>> {
+  private async calculateDeductions(
+    grossAmount: number,
+    customDeductions: Record<string, number> = {}
+  ): Promise<Record<string, number>> {
     const deductions: Record<string, number> = {};
-
     deductions.igss = parseFloat((grossAmount * 0.0483).toFixed(2));
-
     deductions.isr = this.calculateISR(grossAmount);
 
     Object.entries(customDeductions).forEach(([key, value]) => {
-      deductions[key] = (deductions[key] || 0) + value; 
+      deductions[key] = (deductions[key] || 0) + value;
     });
 
     return deductions;
@@ -303,10 +295,8 @@ export class PayrollService {
     if (grossAmount > 100000) isrAmount = grossAmount * 0.15;
     else if (grossAmount > 50000) isrAmount = grossAmount * 0.10;
     else if (grossAmount > 30000) isrAmount = grossAmount * 0.05;
-
     return parseFloat(isrAmount.toFixed(2));
   }
-  
 
   async getPayrollStats() {
     const totalPayrolls = await prisma.payroll.count();
@@ -320,12 +310,8 @@ export class PayrollService {
 
     const byDepartment = await prisma.department.findMany({
       include: {
-        _count: {
-          select: { payrolls: true }
-        },
-        payrolls: {
-          include: { items: true }
-        }
+        _count: { select: { payrolls: true } },
+        payrolls: { include: { items: true } }
       }
     });
 
@@ -336,10 +322,82 @@ export class PayrollService {
       byDepartment: byDepartment.map(dept => ({
         department: dept.name,
         count: dept._count.payrolls,
-        amount: dept.payrolls.reduce((sum, payroll) => 
-          sum + payroll.items.reduce((itemSum, item) => itemSum + item.grossAmount, 0), 0
+        amount: dept.payrolls.reduce(
+          (sum, payroll) =>
+            sum + payroll.items.reduce((itemSum, item) => itemSum + item.grossAmount, 0),
+          0
         )
       }))
     };
+  }
+
+  async createIndividualPayroll(employeeId: string, data: PayrollCreateDTO) {
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
+
+    const startDate = new Date(data.periodStart);
+    const endDate = new Date(data.periodEnd);
+    if (startDate >= endDate) throw new Error('INVALID_DATE_RANGE');
+
+    const overlappingPayroll = await prisma.payroll.findFirst({
+      where: {
+        employeeId: employee.id,
+        OR: [
+          { periodStart: { gte: startDate, lte: endDate } },
+          { periodEnd: { gte: startDate, lte: endDate } },
+          { periodStart: { lte: startDate }, periodEnd: { gte: endDate } }
+        ]
+      }
+    });
+    if (overlappingPayroll) {
+      throw new Error('OVERLAPPING_PERIOD');
+    }
+
+    const payroll = await prisma.payroll.create({
+      data: {
+        periodStart: startDate,
+        periodEnd: endDate,
+        description:
+          data.description ||
+          `Nómina individual de ${employee.firstName} ${employee.lastName}`,
+        status: 'DRAFT',
+        employeeId: employee.id, 
+        items: {
+          create: [
+            {
+              employeeId: employee.id,
+              grossAmount: this.calculateGrossSalary(employee as any),
+              deductions: {},
+              netAmount: this.calculateGrossSalary(employee as any)
+            }
+          ]
+        }
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            department: { select: { id: true, name: true } }
+          }
+        },
+        items: {
+          include: {
+            employee: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                department: { select: { id: true, name: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return payroll;
   }
 }

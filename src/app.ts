@@ -8,16 +8,19 @@ import { requestLogger } from './core/middleware/logging.js';
 import { errorHandler } from './core/middleware/errorHandler.js';
 import { env } from './core/config/env.js';
 
+// Rutas de módulos
 import authRoutes from './modules/auth/auth.routes.js';
 import employeeRoutes from './modules/employees/employee.routes.js';
 import departmentRoutes from './modules/departments/department.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
 import payrollRoutes from './modules/payroll/payroll.routes.js';
 import userRoutes from './modules/users/user.routes.js';
+import reportsRoutes from './modules/reports/reports.routes.js';
+import profileRoutes from './modules/profile/profile.routes.js';
+ 
 
 const app = express();
 
-// Seguridad y cabeceras
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -26,7 +29,6 @@ app.use(
 
 app.use(compression());
 
-// CORS configurado para desarrollo y producción
 app.use(
   cors({
     origin:
@@ -34,6 +36,8 @@ app.use(
         ? ['https://tudominio.com']
         : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
@@ -43,8 +47,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logs
 app.use(requestLogger);
 
-// 📁 Servir archivos subidos (por ejemplo: /api/uploads/archivo.pdf)
 app.use('/api/uploads', express.static('uploads'));
+
+import path from 'path';
+app.use('/downloads', express.static(path.resolve('reports'))); 
 
 // Rutas principales
 app.use('/api/auth', authRoutes);
@@ -53,8 +59,9 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/profile', profileRoutes);
 
-// Endpoint de salud
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -67,7 +74,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rutas no encontradas
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -78,7 +84,6 @@ app.use('*', (req, res) => {
   });
 });
 
-// Manejo de errores global
 app.use(errorHandler);
 
 export default app;
