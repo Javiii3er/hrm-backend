@@ -1,14 +1,13 @@
-// src/app.ts
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import path from 'path';
 
 import { requestLogger } from './core/middleware/logging.js';
 import { errorHandler } from './core/middleware/errorHandler.js';
 import { env } from './core/config/env.js';
 
-// Rutas de módulos
 import authRoutes from './modules/auth/auth.routes.js';
 import employeeRoutes from './modules/employees/employee.routes.js';
 import departmentRoutes from './modules/departments/department.routes.js';
@@ -17,7 +16,6 @@ import payrollRoutes from './modules/payroll/payroll.routes.js';
 import userRoutes from './modules/users/user.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
 import profileRoutes from './modules/profile/profile.routes.js';
- 
 
 const app = express();
 
@@ -31,12 +29,22 @@ app.use(compression());
 
 app.use(
   cors({
-    origin:
-      env.NODE_ENV === 'production'
-        ? ['https://tudominio.com']
-        : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'https://hrm-frontend-sigma-three.vercel.app', 
+        'https://hrm-backend-o1nu.onrender.com' 
+      ];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS bloqueado para este origen'));
+      }
+    },
     credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
@@ -44,15 +52,11 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logs
 app.use(requestLogger);
 
 app.use('/api/uploads', express.static('uploads'));
+app.use('/downloads', express.static(path.resolve('reports')));
 
-import path from 'path';
-app.use('/downloads', express.static(path.resolve('reports'))); 
-
-// Rutas principales
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/departments', departmentRoutes);
@@ -83,6 +87,7 @@ app.use('*', (req, res) => {
     },
   });
 });
+
 
 app.use(errorHandler);
 
