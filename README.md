@@ -64,6 +64,17 @@ src/
 
 ---
 
+##  Migraciones de Base de Datos (Prisma)
+
+Para mantener el esquema sincronizado con la base de datos y generar el cliente actualizado:
+
+# 1 Crear migración cuando haya cambios en el esquema
+npx prisma migrate dev --name update-employee-relations
+
+# 2 Regenerar el cliente Prisma
+npx prisma generate
+
+---
 
 ### Clonar y configurar la base de datos local
 
